@@ -1,0 +1,124 @@
+name: openscreen
+base: core26
+version: '2.2.2'
+title: OpenScreen
+icon: snap/gui/openscreen.png
+summary: Record your screen and create polished videos with automatic zoom
+description: |
+  OpenScreen records your screen, microphone, system audio and webcam, then
+  turns recordings into polished videos with zooms, cursor effects, captions,
+  backgrounds, annotations and timeline editing. Export to MP4 or GIF with
+  a native GPU compositor and software fallbacks.
+
+  Launch OpenScreen from the application menu or run openscreen. Screen
+  capture requires PipeWire and a desktop ScreenCast portal. Connect the
+  pipewire and audio-record interfaces for audio, and camera for a webcam.
+license: MIT
+grade: stable
+confinement: strict
+website: https://getopenscreen.com/
+source-code:
+  - https://github.com/getopenscreen/openscreen
+  - https://github.com/sidalit/openscreen-snap
+issues:
+  - https://github.com/getopenscreen/openscreen/issues
+  - https://github.com/sidalit/openscreen-snap/issues
+contact: https://github.com/sidalit/openscreen-snap/issues
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  openscreen:
+    command: bin/openscreen
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - network-bind
+      - browser-support
+      - audio-playback
+      - audio-record
+      - pipewire
+      - camera
+      - password-manager-service
+      - removable-media
+    environment:
+      OPENSCREEN_DISABLE_CLICK_CAPTURE: '1'
+
+parts:
+  openscreen:
+    plugin: rust
+    source: https://github.com/getopenscreen/openscreen.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
+    rust-channel: stable
+    rust-ignore-toolchain-file: true
+    build-snaps:
+      - node/22/stable
+    build-packages:
+      - build-essential
+      - ca-certificates
+      - cmake
+      - git
+      - glslc
+      - libclang-dev
+      - libvulkan-dev
+      - ninja-build
+      - patch
+      - patchelf
+      - pkg-config
+      - python3
+      - spirv-headers
+    build-environment:
+      - PATH: $HOME/.cargo/bin:/snap/node/current/bin:$PATH
+      - HUSKY: '0'
+      - CARGO_BUILD_JOBS: $CRAFT_PARALLEL_BUILD_COUNT
+      - OPENSCREEN_SYMBOL_FLOOR: snap-base
+    override-pull: |
+      craftctl default
+      patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/snap.patch"
+    override-build: |
+      npm ci
+      # Upstream verifies the pinned FFmpeg SDK and ONNX Runtime checksums.
+      npm run fetch:ffmpeg:sdk
+      npm run build:native:linux
+      npm run fetch:onnxruntime
+      npm run build:whisper-binaries
+      npm run build:native:compositor:linux
+      # The shared desktop runtime supplies Ubuntu's OpenMP library.
+      rm electron/native/bin/linux-*/libgomp.so.1
+      npm run build-vite
+      npm run licenses:generate
+      npx --no-install electron-builder --linux --dir --publish never \
+        --config.npmRebuild=false \
+        --config.extraMetadata.desktopName=openscreen_openscreen.desktop
+
+      mkdir -p "$CRAFT_PART_INSTALL/opt/openscreen"
+      cp -a release/*/linux*-unpacked/. "$CRAFT_PART_INSTALL/opt/openscreen/"
+      rm "$CRAFT_PART_INSTALL/opt/openscreen/chrome-sandbox"
+      install -Dm644 LICENSE "$CRAFT_PART_INSTALL/share/doc/openscreen/LICENSE"
+      install -Dm644 THIRD-PARTY-NOTICES.md \
+        "$CRAFT_PART_INSTALL/share/doc/openscreen/THIRD-PARTY-NOTICES.md"
+      native_tag="linux-$(node -p process.arch)"
+      deps=".cache/whisper-stt-build/build-$native_tag-default/_deps"
+      licenses="$CRAFT_PART_INSTALL/share/doc/openscreen"
+      install -m644 "$deps/whisper-src/LICENSE" "$licenses/whisper-LICENSE"
+      install -m644 "$deps/httplib-src/LICENSE" "$licenses/httplib-LICENSE"
+      install -m644 "$deps/json-src/LICENSE.MIT" "$licenses/json-LICENSE"
+      # Preserve the SDK's own license texts and source/build provenance.
+      cp -a crates/thirdparty/ffmpeg-linux64-lgpl-shared/doc \
+        "$CRAFT_PART_INSTALL/share/doc/openscreen/ffmpeg"
+      install -m644 crates/thirdparty/ffmpeg-linux64-lgpl-shared/LICENSE.txt \
+        "$CRAFT_PART_INSTALL/share/doc/openscreen/ffmpeg/LICENSE.txt"
+
+  runtime:
+    plugin: nil
+    stage-packages:
+      - libgbm1
+      - libgomp1
+
+  launcher:
+    plugin: dump
+    source: snap/local

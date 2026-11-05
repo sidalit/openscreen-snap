@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=OpenScreen
+Comment=Record your screen and create polished demo videos
+Exec=openscreen %U
+Icon=${SNAP}/meta/gui/openscreen.png
+Terminal=false
+Categories=AudioVideo;Video;Recorder;
+StartupWMClass=openscreen
