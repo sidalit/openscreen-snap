@@ -81,3 +81,14 @@
  		if (targetPlatform !== "win32") fs.chmodSync(dest, 0o755);
  		writeStamp(dest, stamp, spec);
  
+--- a/electron/native/whisper-stt/CMakeLists.txt
++++ b/electron/native/whisper-stt/CMakeLists.txt
+@@ -101,6 +101,8 @@ FetchContent_Declare(whisper
+   GIT_REPOSITORY ${WHISPER_REPO}
+   GIT_TAG        ${WHISPER_REF}
+   GIT_SHALLOW    TRUE
++  PATCH_COMMAND patch --batch --forward -p1 -i
++    "$ENV{CRAFT_PROJECT_DIR}/snap/patches/whisper-vulkan-memory.patch"
+ )
+ FetchContent_Declare(httplib
+   GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
