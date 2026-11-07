@@ -63,13 +63,6 @@ sudo snap install snapcraft --classic
 snapcraft pack
 ```
 
-```bash
-sudo snap install --dangerous ./openscreen_*.snap
-sudo snap connect openscreen:pipewire
-sudo snap connect openscreen:audio-record
-openscreen
-```
-
 ## Support
 
 - **Installation or snap issues:** [open a packaging issue](https://github.com/sidalit/openscreen-snap/issues).
