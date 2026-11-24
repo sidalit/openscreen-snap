@@ -71,6 +71,7 @@ parts:
       - pkg-config
       - python3
       - spirv-headers
+      - unzip
     build-environment:
       - PATH: $HOME/.cargo/bin:/snap/node/current/bin:$PATH
       - HUSKY: '0'
