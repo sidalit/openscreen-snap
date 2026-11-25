@@ -1,6 +1,6 @@
 name: openscreen
 base: core26
-version: '2.2.2'
+version: '2.4.0'
 title: OpenScreen
 icon: snap/gui/openscreen.png
 summary: Record your screen and create polished videos with automatic zoom
