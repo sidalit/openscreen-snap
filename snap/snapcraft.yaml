@@ -48,6 +48,23 @@ apps:
       OPENSCREEN_DISABLE_CLICK_CAPTURE: '1'
 
 parts:
+  # microsoft/onnxruntime's GitHub releases are gone; its NuGet package
+  # holds the same libraries.
+  onnxruntime:
+    plugin: nil
+    source: https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/1.27.1/microsoft.ml.onnxruntime.1.27.1.nupkg
+    source-type: zip
+    source-checksum: sha256/9359e46eba4482ded00e678c98f22b68f51bb411d7934f5516d64050edfa3383
+    override-build: |
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) native=runtimes/linux-x64/native ;;
+        arm64) native=runtimes/linux-arm64/native ;;
+      esac
+      install -Dm755 -t "$CRAFT_PART_INSTALL/build-deps/onnxruntime" "$native/libonnxruntime.so"
+      install -m644 LICENSE "$CRAFT_PART_INSTALL/build-deps/onnxruntime/"
+    prime:
+      - -*
+
   openscreen:
     plugin: rust
     source: https://github.com/getopenscreen/openscreen.git
@@ -55,6 +72,8 @@ parts:
     source-depth: 1
     rust-channel: stable
     rust-ignore-toolchain-file: true
+    after:
+      - onnxruntime
     build-snaps:
       - node/22/stable
     build-packages:
@@ -82,10 +101,14 @@ parts:
       patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/snap.patch"
     override-build: |
       npm ci
-      # Upstream verifies the pinned FFmpeg SDK and ONNX Runtime checksums.
+      # Upstream verifies the pinned FFmpeg SDK checksum.
       npm run fetch:ffmpeg:sdk
       npm run build:native:linux
-      npm run fetch:onnxruntime
+      native_tag="linux-$(node -p process.arch)"
+      bin="electron/native/bin/$native_tag"
+      ort="$CRAFT_STAGE/build-deps/onnxruntime"
+      install -Dm755 "$ort/libonnxruntime.so" "$bin/libonnxruntime.so"
+      install -Dm644 "$ort/LICENSE" "$bin/ONNX-RUNTIME-LICENSE"
       npm run build:whisper-binaries
       npm run build:native:compositor:linux
       # The shared desktop runtime supplies Ubuntu's OpenMP library.
@@ -102,7 +125,6 @@ parts:
       install -Dm644 LICENSE "$CRAFT_PART_INSTALL/share/doc/openscreen/LICENSE"
       install -Dm644 THIRD-PARTY-NOTICES.md \
         "$CRAFT_PART_INSTALL/share/doc/openscreen/THIRD-PARTY-NOTICES.md"
-      native_tag="linux-$(node -p process.arch)"
       deps=".cache/whisper-stt-build/build-$native_tag-default/_deps"
       licenses="$CRAFT_PART_INSTALL/share/doc/openscreen"
       install -m644 "$deps/whisper-src/LICENSE" "$licenses/whisper-LICENSE"

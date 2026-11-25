@@ -61,26 +61,17 @@
    `resources/electron/native/bin/<platform>-<arch>/`.
  - **License**: MIT — <https://github.com/microsoft/onnxruntime>.
  - Not built here: the pinned upstream release archive is downloaded, SHA-256
-@@ -81,8 +89,7 @@
+@@ -81,8 +89,8 @@
    magnitude larger and carry NVIDIA redistribution terms.
  - **Not on Intel macOS**: upstream publishes no `osx-x86_64` asset from 1.27 on,
    so the x64 DMG ships without it and the camera background effects are simply
 -  absent there. Not shipped on Linux either, where the compositor has no capture
 -  path for the mask yet.
-+  absent there. Linux amd64 and arm64 ship ONNX Runtime for webcam segmentation.
++  absent there. Linux amd64 and arm64 ship ONNX Runtime for webcam segmentation,
++  the same library taken from Microsoft's `Microsoft.ML.OnnxRuntime` NuGet package.
  - The segmentation model it runs is a separate component, immediately below.
  
  ## MediaPipe Selfie Segmentation — model weights
---- a/scripts/fetch-onnxruntime.mjs
-+++ b/scripts/fetch-onnxruntime.mjs
-@@ -382,6 +382,7 @@
- 
- 		fs.mkdirSync(binDir, { recursive: true });
- 		fs.copyFileSync(lib, dest);
-+		fs.copyFileSync(license, path.join(binDir, "ONNX-RUNTIME-LICENSE"));
- 		if (targetPlatform !== "win32") fs.chmodSync(dest, 0o755);
- 		writeStamp(dest, stamp, spec);
- 
 --- a/electron/native/whisper-stt/CMakeLists.txt
 +++ b/electron/native/whisper-stt/CMakeLists.txt
 @@ -101,6 +101,8 @@ FetchContent_Declare(whisper
